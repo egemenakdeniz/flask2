@@ -48,5 +48,9 @@ def predict():
 
 # -------------------------------
 # Ana dosya olarak çalıştırıldığında
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+import os
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 10000))  # Render otomatik PORT verir
+    app.run(host='0.0.0.0', port=port)
+
