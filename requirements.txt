@@ -1,5 +1,4 @@
-flask
-numpy
-tensorflow
-scikit-learn
-pandas
+Flask==2.2.5
+numpy==1.24.4
+scikit-learn==1.3.2
+joblib==1.3.2
