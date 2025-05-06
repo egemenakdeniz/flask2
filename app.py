@@ -1,56 +1,42 @@
 from flask import Flask, request, jsonify
 import numpy as np
-import tensorflow as tf
-import pickle
+import pandas as pd
+from tensorflow.keras.models import load_model
+from sklearn.preprocessing import LabelEncoder
 
 # Flask uygulaması
 app = Flask(__name__)
 
-# -------------------------------
-# Model ve yardımcı dosyaları yükle
-model = tf.keras.models.load_model("emotion_recognition_modelv9.h5")
+# CSV dosyasından etiketleri al
+df = pd.read_csv("heart_rate_emotion_dataset.csv")
+selected_classes = ["happy", "sad", "neutral"]
+df_filtered = df[df["Emotion"].isin(selected_classes)]
 
-with open("scaler.pkl", "rb") as f:
-    scaler = pickle.load(f)
+le = LabelEncoder()
+le.fit(df_filtered["Emotion"])
 
-with open("label_encoder.pkl", "rb") as f:
-    encoder = pickle.load(f)
+# Modeli yükle
+model = load_model("yepyenimodel.keras")
 
-emotion_classes = list(encoder.classes_)
-
-# -------------------------------
-# API endpoint: /predict
-@app.route("/predict", methods=["POST"])
-def predict():
+@app.route("/tahmin", methods=["POST"])
+def tahmin():
     try:
-        data = request.json.get("data")
-        if data is None:
-            return jsonify({"error": "Veri bulunamadı"}), 400
+        data = request.get_json()
+        bpm = data.get("bpm")
 
-        if len(data) != 600:
-            return jsonify({"error": f"600 veri bekleniyor, ama {len(data)} veri geldi"}), 400
+        if bpm is None:
+            return jsonify({"error": "BPM verisi eksik"}), 400
 
-        # Normalizasyon
-        normalized = scaler.transform(np.array(data).reshape(-1, 1)).flatten()
+        input_data = np.array([[float(bpm)]])
+        prediction = model.predict(input_data)
 
-        # Modele uygun giriş oluştur
-        X_input = np.array(normalized).reshape((1, 600, 1))
+        predicted_index = np.argmax(prediction)
+        predicted_emotion = le.inverse_transform([predicted_index])[0]
 
-        # Tahmin yap
-        pred = model.predict(X_input, verbose=0)
-        predicted_label = np.argmax(pred)
-        predicted_emotion = emotion_classes[predicted_label]
-
-        return jsonify({"emotion": predicted_emotion})
+        return jsonify({"duygu": predicted_emotion})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# -------------------------------
-# Ana dosya olarak çalıştırıldığında
-import os
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))  # Render otomatik PORT verir
-    app.run(host='0.0.0.0', port=port)
-
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
