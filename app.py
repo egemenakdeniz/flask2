@@ -1,22 +1,12 @@
 from flask import Flask, request, jsonify
 import numpy as np
-import pandas as pd
-from tensorflow.keras.models import load_model
-from sklearn.preprocessing import LabelEncoder
+import joblib
 
-# Flask uygulaması
 app = Flask(__name__)
 
-# CSV dosyasından etiketleri al
-df = pd.read_csv("heart_rate_emotion_dataset.csv")
-selected_classes = ["happy", "sad", "neutral"]
-df_filtered = df[df["Emotion"].isin(selected_classes)]
-
-le = LabelEncoder()
-le.fit(df_filtered["Emotion"])
-
-# Modeli yükle
-model = load_model("yepyenimodel.keras")
+# Model ve LabelEncoder'ı yükle
+model = joblib.load("heart_rate_emotion_model1.pkl")
+le = joblib.load("label_encoder1.pkl")
 
 @app.route("/tahmin", methods=["POST"])
 def tahmin():
@@ -29,9 +19,7 @@ def tahmin():
 
         input_data = np.array([[float(bpm)]])
         prediction = model.predict(input_data)
-
-        predicted_index = np.argmax(prediction)
-        predicted_emotion = le.inverse_transform([predicted_index])[0]
+        predicted_emotion = le.inverse_transform(prediction)[0]
 
         return jsonify({"duygu": predicted_emotion})
 
